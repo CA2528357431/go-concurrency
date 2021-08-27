@@ -1,4 +1,4 @@
-// 资源保护
+// 协程保护
 
 
 package main
@@ -10,8 +10,10 @@ import (
 
 var (
 	res = make(map[int]int)
-	// 互斥锁
 	lock sync.Mutex
+	check = make(chan int,10)
+
+
 )
 
 func main() {
@@ -21,14 +23,17 @@ func main() {
 		go do(i)
 	}
 
+	// 每个协程结束都会向check里插入一个数字
+	// 在此我们要求从check弹出10个数据，否则阻塞
+	for i:=0;i<10;i++{
+		<-check
+	}
 
-	// 防止读取的时候被改写
-	lock.Lock()
 	for key,value:=range res{
 		fmt.Println(key,value)
 	}
 	fmt.Println(len(res))
-	lock.Unlock()
+
 
 
 }
@@ -37,10 +42,7 @@ func do(x int)  {
 		lock.Lock()
 		res[x] = x*x*x
 		lock.Unlock()
-		// 对map进行保护
 	}
+	check<-1
+
 }
-
-
-// 我们会发现大量数据尚未被写入
-// 因为我们尚未进行协程保护
